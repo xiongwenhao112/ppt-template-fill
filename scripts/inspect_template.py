@@ -21,7 +21,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 from pptx import Presentation  # noqa: E402
 from pptx.util import Emu  # noqa: E402
 
-from pptxkit import collect_slots, guess_slide_role  # noqa: E402
+from pptxkit import collect_slots, guess_slide_role, safe_layout  # noqa: E402
 
 
 def build_manifest(path):
@@ -31,9 +31,10 @@ def build_manifest(path):
     for i, slide in enumerate(prs.slides, 1):
         slots = collect_slots(slide)
         fillable = [s for s in slots["text_slots"] if not s["decorative"]]
+        layout = safe_layout(slide)
         slides.append({
             "index": i,
-            "layout_name": slide.slide_layout.name,
+            "layout_name": layout.name if layout is not None else "(无法解析)",
             "role_guess": guess_slide_role(slide, i, total),
             "fillable_text_slots": len(fillable),
             "capacity_chars": sum(s["sample_len"] for s in fillable),

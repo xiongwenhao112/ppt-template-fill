@@ -24,13 +24,13 @@
 模板的每一页都是候选版式。Agent 先解析模板得到每页的"槽位契约"（哪些文本框可以填、字数预算多少、哪些是装饰不能动、图片槽宽高比如何），再把内容规划写成受约束的 `plan.json`，最后由生成器克隆模板页、只替换内容：
 
 ```
-inspect_template.py  →  模板槽位 manifest + 逐页截图
+inspect_template.py     →  模板槽位 manifest + 逐页截图
         ↓
-   plan.json         →  每页: 选模板哪一页 + 各槽位填什么
+build_deck.py --scaffold →  plan.json 骨架: 每个可填槽预填「【待填】+ 原文」, AI 只做填空
         ↓
-build_deck.py        →  校验(字数/漏填/路径) → 克隆页 → 填充 → 成品 pptx
+build_deck.py           →  校验(漏填/待填残留=报错, 字数/路径) → 克隆页 → 填充 → 成品 pptx
         ↓
-snapshot.py          →  成品逐页截图, Agent 目检后交付
+snapshot.py             →  成品逐页截图, Agent 目检后交付(无截图环境降级为契约校验 QA)
 ```
 
 设计哲学（借鉴 dashi-ppt-skill 的方法论）：LLM 不擅长稳定的视觉设计，但很擅长填结构化 JSON。所以把 AI 的自由度压缩到只剩"选版式"和"写文案"，错误要么被契约挡在生成前，要么被截图抓在交付前。
@@ -43,7 +43,8 @@ snapshot.py          →  成品逐页截图, Agent 目检后交付
 - **槽位契约**：自动识别可填文本槽（含字数预算）、装饰槽（页码/LOGO，防误填）、图片槽（宽高比）、表格、空占位符（附版式用途提示）
 - **图片替换**：按槽位宽高比自动居中裁切（srcRect，不重编码不变形）
 - **表格逐格填写**、**演讲者备注**写入
-- **双重质检**：生成前校验（模板文案残留、超字数、坏路径），生成后 PowerPoint COM 逐页截图供 Agent 目检
+- **填空式计划骨架**：`--scaffold` 按选定页序生成 plan 骨架，每个可填槽预填「【待填】+ 模板原文」——漏填在结构上不可能发生，弱模型也能稳定执行
+- **双重质检**：生成前校验（模板文案残留和【待填】残留默认**报错阻断**，超字数、坏路径告警），生成后 PowerPoint COM / LibreOffice 逐页截图供 Agent 目检
 
 ## 环境要求
 
@@ -65,6 +66,8 @@ git clone https://github.com/xiongwenhao112/ppt-template-fill.git ~/.claude/skil
 ```
 
 其他 Agent：把本目录放到对应技能目录，或直接让它读 `SKILL.md`。
+
+**办公小浣熊等在线 Agent**：打包上传**整个目录**（必须含 `scripts/` 与 `references/`，不能只传 `SKILL.md`——脚本就是执行引擎，Agent 拿不到脚本就会自己手写 PPT 代码，产物必然翻车）。首次使用建议提示词加一句「严格按 SKILL.md 工作流执行，禁止自己写 python-pptx 代码」。
 
 ## 使用
 

@@ -96,9 +96,18 @@ _ROLE_PATTERNS = [
     ("section", re.compile(r"^第?\s*[0-9一二三四五六七八九十]+\s*(章|部分|节)|^PART\b", re.I | re.M)),
 ]
 
+def safe_layout(slide):
+    """取版式对象; 文件畸形(如一页多个 layout 关系)时返回 None 而不是崩溃。"""
+    try:
+        return slide.slide_layout
+    except (ValueError, KeyError, AttributeError):
+        return None
+
+
 def guess_slide_role(slide, index, total):
     """粗分类: cover / toc / section / ending / content。仅作提示, 由 agent 结合截图定夺。"""
-    layout_name = (slide.slide_layout.name or "").lower()
+    layout = safe_layout(slide)
+    layout_name = ((layout.name if layout is not None else "") or "").lower()
     all_text = "\n".join(get_text(sh) for sh, _ in iter_shapes(slide.shapes))
     for role, pat in _ROLE_PATTERNS:
         if pat.search(all_text):
@@ -167,10 +176,11 @@ def collect_slots(slide):
             # 占位符可能不带自身尺寸/字号/提示文字, 需回退到版式同 idx 占位符
             layout_prompt = None
             layout_ph = None
-            if is_ph:
+            layout = safe_layout(slide)
+            if is_ph and layout is not None:
                 try:
                     idx = sh.placeholder_format.idx
-                    for lph in slide.slide_layout.placeholders:
+                    for lph in layout.placeholders:
                         if lph.placeholder_format.idx == idx:
                             layout_ph = lph
                             break
