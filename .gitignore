@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+output/
+thumbs/
+manifest.json
+*.tmp
+.DS_Store
